@@ -6,110 +6,314 @@
 <title>Sticker Maker</title>
 <style>
   :root {
-    --bg: #f5f6f8; --panel: #fff; --text: #1d2330; --muted: #6b7280; --line: #e3e6ec;
-    --accent: #4f46e5; --accent-h: #4338ca; --check1: #e9ebf0; --check2: #fff;
+    --bg: #f4f5fb; --panel: rgba(255,255,255,.85); --solid: #fff; --text: #1b1f2e; --muted: #6b7185; --line: #e2e5f0;
+    --accent: #6d5efc; --accent2: #ff6ec4; --accent-h: #5a4be8; --danger: #e5484d;
+    --check1: #e8eaf2; --check2: #fff; --shadow: 0 10px 30px -12px rgba(60,50,140,.25);
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #14161c; --panel: #1d2028; --text: #eceef3; --muted: #9aa1b0; --line: #2d313c;
-      --accent: #7c75ff; --accent-h: #968fff; --check1: #2a2e38; --check2: #353a46; }
+  :root[data-theme="dark"] {
+    --bg: #11131a; --panel: rgba(29,32,43,.85); --solid: #1d202b; --text: #eceef6; --muted: #9ca2b6; --line: #2e3242;
+    --accent: #8b7fff; --accent2: #ff7ad0; --accent-h: #a094ff; --check1: #2a2e3a; --check2: #353a48; --shadow: 0 10px 30px -12px rgba(0,0,0,.6);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 20px; grid-template-columns: 300px 1fr; align-items: start; }
-  @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } }
-  h1 { grid-column: 1 / -1; margin: 0; font-size: 24px; }
-  h1 small { font-weight: 400; color: var(--muted); font-size: 14px; margin-left: 8px; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
-  .controls { position: sticky; top: 16px; display: grid; gap: 16px; }
-  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-  .row { display: flex; align-items: center; gap: 10px; }
-  .row input[type=range] { flex: 1; accent-color: var(--accent); }
-  .val { min-width: 54px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
-  input[type=number], input[type=color] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; width: 100%; }
-  input[type=color] { padding: 2px; height: 36px; width: 60px; }
-  .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 28px 16px; text-align: center; color: var(--muted); cursor: pointer; transition: .15s; }
-  .drop.over, .drop:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
-  .drop b { color: var(--text); }
-  button { font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; background: var(--accent); color: #fff; font-weight: 600; }
-  button:hover { background: var(--accent-h); }
-  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
-  button.ghost:hover { background: var(--bg); }
+  body { margin: 0; color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh;
+    background: radial-gradient(900px 500px at 8% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+                radial-gradient(800px 500px at 100% 0%, color-mix(in srgb, var(--accent2) 16%, transparent), transparent 60%), var(--bg);
+    background-attachment: fixed; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 80px; display: grid; gap: 20px; grid-template-columns: 330px 1fr; align-items: start; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } .controls { position: static !important; max-height: none !important; } }
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: -.5px; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header small { color: var(--muted); font-size: 13px; flex: 1; }
+  .logo { width: 38px; height: 38px; filter: drop-shadow(0 4px 6px rgba(109,94,252,.35)); }
+  .panel { background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+  .controls { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 4px; scrollbar-width: thin; }
+  .grp { padding: 10px 0 14px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
+  .grp:last-child { border: 0; }
+  .grp h3 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); }
+  .lbl { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .val { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=number], input[type=text], select { font: inherit; color: var(--text); background: var(--solid); border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; width: 100%; }
+  input:focus, select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 1px; }
+  input[type=color] { width: 100%; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--solid); cursor: pointer; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opt { display: grid; gap: 10px; }
+  .sub { display: grid; gap: 10px; padding: 10px 0 2px 14px; border-left: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  .sub[hidden] { display: none; }
+  .sw { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; font-size: 14px; user-select: none; }
+  .sw input { position: absolute; opacity: 0; }
+  .sw i { width: 38px; height: 22px; border-radius: 99px; background: var(--line); position: relative; transition: .2s; flex: none; }
+  .sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .sw input:checked + i { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .sw input:checked + i::after { left: 19px; }
+  .sw input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 5px 10px; font-size: 12px; border-radius: 99px; background: var(--solid); border: 1px solid var(--line); color: var(--text); font-weight: 600; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--solid); }
+  .align { display: grid; grid-template-columns: repeat(3, 28px); gap: 4px; }
+  .align button { width: 28px; height: 28px; padding: 0; border-radius: 7px; background: var(--solid); border: 1px solid var(--line); position: relative; }
+  .align button::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--line); }
+  .align button.on { border-color: var(--accent); }
+  .align button.on::after { background: var(--accent); }
+  .row { display: flex; gap: 12px; align-items: center; }
+  button { font: inherit; border: 0; border-radius: 11px; padding: 9px 15px; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-weight: 600; transition: transform .1s, filter .15s, box-shadow .15s; box-shadow: 0 6px 16px -8px var(--accent); }
+  button:hover { filter: brightness(1.07); }
+  button:active { transform: translateY(1px) scale(.99); }
+  button.ghost { background: var(--solid); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+  button.ghost:hover { border-color: var(--accent); filter: none; }
   button:disabled { opacity: .45; cursor: not-allowed; }
-  .bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .bar .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .drop { border: 2px dashed color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 18px; padding: 30px 16px; text-align: center; color: var(--muted); cursor: pointer; transition: .2s; background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .drop.over, .drop:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); transform: scale(1.005); }
+  .drop b { color: var(--text); font-size: 17px; }
+  .drop .big { font-size: 34px; line-height: 1; margin-bottom: 6px; }
+  .bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin: 18px 0 8px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .status { color: var(--muted); font-size: 13px; }
+  .prog { height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; margin-bottom: 14px; opacity: 0; transition: opacity .2s; }
+  .prog.on { opacity: 1; }
+  .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .2s; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
-  .card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); display: flex; flex-direction: column; }
-  .thumb { aspect-ratio: 1; background: repeating-conic-gradient(var(--check1) 0 25%, var(--check2) 0 50%) 0 0 / 16px 16px; display: grid; place-items: center; position: relative; }
+  .card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--solid); display: flex; flex-direction: column; animation: pop .25s ease; transition: transform .15s, box-shadow .15s; }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  @keyframes pop { from { opacity: 0; transform: scale(.94); } }
+  .thumb { aspect-ratio: 1; background: repeating-conic-gradient(var(--check1) 0 25%, var(--check2) 0 50%) 0 0 / 16px 16px; position: relative; cursor: zoom-in; }
   .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .thumb .spin { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.25); color: #fff; font-size: 13px; }
+  .thumb .spin { position: absolute; inset: 0; display: none; place-items: center; background: rgba(20,20,40,.35); }
+  .thumb .spin::after { content: ""; width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff; border-top-color: transparent; animation: rot .7s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .badge { position: absolute; left: 6px; bottom: 6px; font-size: 11px; padding: 2px 7px; border-radius: 99px; background: rgba(20,20,40,.7); color: #fff; font-variant-numeric: tabular-nums; }
+  .badge.over { background: var(--danger); }
+  .tag { position: absolute; right: 6px; top: 6px; font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--accent); color: #fff; display: none; }
   .meta { padding: 8px 10px; display: flex; gap: 6px; align-items: center; }
   .meta span { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .meta button { padding: 4px 8px; font-size: 12px; border-radius: 7px; }
-  .empty { text-align: center; color: var(--muted); padding: 48px 0; }
-  .check { display: flex; align-items: center; gap: 8px; font-weight: 400; font-size: 14px; margin: 0; cursor: pointer; }
-  .check input { accent-color: var(--accent); }
+  .meta button { padding: 4px 9px; font-size: 12px; border-radius: 8px; }
+  .empty { text-align: center; color: var(--muted); padding: 44px 0 20px; }
+  /* modal */
+  .modal { position: fixed; inset: 0; background: rgba(10,10,25,.6); backdrop-filter: blur(6px); display: none; place-items: center; z-index: 50; padding: 16px; }
+  .modal.on { display: grid; animation: fade .15s; }
+  @keyframes fade { from { opacity: 0; } }
+  .mbox { background: var(--solid); border: 1px solid var(--line); border-radius: 20px; width: min(1000px, 100%); max-height: 100%; overflow: auto; display: grid; grid-template-columns: 1fr 280px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.6); }
+  @media (max-width: 760px) { .mbox { grid-template-columns: 1fr; } }
+  .mprev { aspect-ratio: 1; max-height: 78vh; width: 100%; position: relative; display: grid; place-items: center; border-radius: 20px 0 0 20px; overflow: hidden; }
+  .mprev img { max-width: 100%; max-height: 100%; display: block; }
+  .mprev .nav { position: absolute; top: 50%; transform: translateY(-50%); padding: 8px 12px; border-radius: 50%; }
+  .mprev .nav.l { left: 10px; } .mprev .nav.r { right: 10px; }
+  .mside { padding: 18px; display: grid; gap: 14px; align-content: start; }
+  .mside h2 { margin: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bgs { display: flex; gap: 8px; }
+  .bgs button { width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid var(--line); box-shadow: none; }
+  .bgs button.on { border-color: var(--accent); }
+  .toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 60; }
+  .toast { background: #20233a; color: #fff; padding: 10px 14px; border-radius: 12px; display: flex; gap: 14px; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.4); animation: pop .2s; font-size: 14px; }
+  .toast button { padding: 4px 10px; font-size: 13px; }
+  .note { font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Sticker Maker <small>tout se passe dans ton navigateur, rien n'est envoyé</small></h1>
+  <header>
+    <svg class="logo" viewBox="0 0 48 48"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5efc"/><stop offset="1" stop-color="#ff6ec4"/></linearGradient></defs><path d="M8 6h32a4 4 0 0 1 4 4v22L32 44H8a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z" fill="#fff" stroke="url(#lg)" stroke-width="3"/><path d="M44 32L32 44V36a4 4 0 0 1 4-4z" fill="url(#lg)"/><circle cx="18" cy="20" r="5" fill="url(#lg)"/><path d="M10 36l9-9 7 7 5-4 8 8" fill="none" stroke="url(#lg)" stroke-width="3" stroke-linecap="round"/></svg>
+    <h1>Sticker Maker</h1>
+    <small>100 % dans ton navigateur · rien n'est envoyé</small>
+    <button class="ghost" id="theme" title="Thème clair / sombre">◐</button>
+  </header>
 
-  <aside class="panel controls">
-    <div>
-      <label>Taille du canevas (px)</label>
-      <div class="row"><input type="number" id="size" value="1000" min="64" max="4096" step="1"></div>
-    </div>
-    <div>
-      <label>Épaisseur du contour</label>
-      <div class="row"><input type="range" id="thick" min="0" max="120" value="24"><span class="val" id="thickV"></span></div>
-    </div>
-    <div>
-      <label>Marge extérieure</label>
-      <div class="row"><input type="range" id="margin" min="0" max="100" value="0"><span class="val" id="marginV"></span></div>
-    </div>
-    <div>
-      <label>Couleur du contour</label>
-      <div class="row"><input type="color" id="color" value="#ffffff"></div>
-    </div>
-    <label class="check"><input type="checkbox" id="fill" checked> Boucher les trous intérieurs</label>
-    <div class="status">L'élément est recadré au plus près, agrandi au maximum sans déformation, centré, puis entouré du contour arrondi. Contour + marge restent dans le canevas.</div>
-  </aside>
+  <aside class="panel controls" id="controls"></aside>
 
   <main class="panel">
     <div class="drop" id="drop">
-      <div><b>Glisse tes images ici</b> ou clique pour en choisir plusieurs</div>
-      <div style="font-size:13px;margin-top:4px">PNG avec fond transparent recommandé</div>
+      <div class="big">🖼️</div>
+      <div><b>Glisse tes images ou un dossier ici</b></div>
+      <div style="margin-top:4px">ou clique pour choisir · ou colle avec <kbd>Ctrl</kbd>+<kbd>V</kbd></div>
+      <div class="note" style="margin-top:6px">PNG avec fond transparent recommandé (sinon active le détourage auto)</div>
       <input type="file" id="file" accept="image/*" multiple hidden>
+      <input type="file" id="folder" webkitdirectory hidden>
     </div>
 
-    <div class="bar" style="margin-top:18px">
+    <div class="bar">
       <span class="status" id="status">Aucune image</span>
       <div class="actions">
+        <button class="ghost" id="pickFolder">📁 Dossier</button>
         <button class="ghost" id="clear" disabled>Tout vider</button>
-        <button id="zip" disabled>Télécharger tout (.zip)</button>
+        <button id="zip" disabled>⬇ Tout télécharger (.zip)</button>
       </div>
     </div>
+    <div class="prog" id="prog"><i></i></div>
     <div class="grid" id="grid"></div>
-    <div class="empty" id="empty">Les stickers apparaîtront ici.</div>
+    <div class="empty" id="empty">Tes stickers apparaîtront ici.</div>
   </main>
 </div>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <div class="mprev" id="mprev">
+      <img id="mImg" alt="">
+      <button class="ghost nav l" id="mPrev">‹</button>
+      <button class="ghost nav r" id="mNext">›</button>
+    </div>
+    <div class="mside">
+      <h2 id="mName"></h2>
+      <div>
+        <div class="lbl"><span>Fond d'aperçu</span></div>
+        <div class="bgs" id="mBgs"></div>
+      </div>
+      <div class="lbl" style="margin:0"><span>Réglages de cette image</span></div>
+      <div><div class="lbl"><span>Zoom</span><b class="val" id="mZoomV"></b></div><input type="range" id="mZoom" min="30" max="200" value="100"></div>
+      <div><div class="lbl"><span>Décalage horizontal</span><b class="val" id="mXV"></b></div><input type="range" id="mX" min="-50" max="50" value="0"></div>
+      <div><div class="lbl"><span>Décalage vertical</span><b class="val" id="mYV"></b></div><input type="range" id="mY" min="-50" max="50" value="0"></div>
+      <label class="sw"><input type="checkbox" id="mThickOn"><i></i><span>Épaisseur personnalisée</span></label>
+      <div id="mThickBox" hidden><div class="lbl"><span>Épaisseur</span><b class="val" id="mThickV"></b></div><input type="range" id="mThick" min="0" max="120" value="24"></div>
+      <div class="row">
+        <button class="ghost" id="mReset">Réinitialiser</button>
+        <button id="mDl">⬇ Télécharger</button>
+      </div>
+      <button class="ghost" id="mClose">Fermer</button>
+    </div>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
 
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const items = []; // {id, name, img, blob, url, busy}
-let runToken = 0, nextId = 1;
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const tick = () => new Promise(r => setTimeout(r, 0));
 
-// ---------- Euclidean distance transform (Felzenszwalb) ----------
+/* ======================= Controls ======================= */
+const sl = (id, label, min, max, val, unit = "px") =>
+  `<div><div class="lbl"><span>${label}</span><b class="val" data-v="${id}"></b></div><input type="range" data-s id="${id}" min="${min}" max="${max}" value="${val}" data-unit="${unit}"></div>`;
+const sw = (id, label, checked, inner = "") =>
+  `<div class="opt"><label class="sw"><input type="checkbox" data-s id="${id}" ${checked ? "checked" : ""}><i></i><span>${label}</span></label>${inner ? `<div class="sub" data-show="${id}" hidden>${inner}</div>` : ""}</div>`;
+const col = (id, label, v) => `<div><div class="lbl"><span>${label}</span></div><input type="color" data-s id="${id}" value="${v}"></div>`;
+
+$("controls").innerHTML = `
+<section class="grp"><h3>Taille du sticker</h3>
+  <div class="chips">
+    <button class="chip" data-p="512,webp,100">WhatsApp · 512 WebP</button>
+    <button class="chip" data-p="512,png,512">Telegram · 512</button>
+    <button class="chip" data-p="1080,png,0">Instagram · 1080</button>
+    <button class="chip" data-p="1000,png,0">Standard · 1000</button>
+    <button class="chip" data-p="2048,png,0">HD · 2048</button>
+  </div>
+  <div><div class="lbl"><span>Canevas (px, carré)</span></div><input type="number" data-s id="size" value="1000" min="64" max="4096"></div>
+</section>
+
+<section class="grp"><h3>Contour</h3>
+  ${sl("thick", "Épaisseur", 0, 120, 24)}
+  ${col("color", "Couleur", "#ffffff")}
+  ${sw("fill", "Boucher les trous intérieurs", true)}
+  ${sw("smoothOn", "Lissage de la forme", false, sl("smooth", "Force", 1, 50, 10))}
+  ${sw("ringOn", "Double contour", false, sl("ringThick", "Épaisseur du 2ᵉ contour", 1, 50, 6) + col("ringColor", "Couleur du 2ᵉ contour", "#d9d9e3"))}
+</section>
+
+<section class="grp"><h3>Effets</h3>
+  ${sw("shOn", "Ombre portée", false, sl("shBlur", "Flou", 0, 60, 12) + sl("shY", "Décalage vers le bas", 0, 50, 6) + sl("shOp", "Opacité", 5, 100, 35, "%"))}
+  ${sw("bgOn", "Détourage auto du fond", false, sl("bgTol", "Tolérance", 5, 120, 30, "") + `<div class="note">Retire le fond uni connecté aux bords de l'image. Sans effet si l'image est déjà transparente.</div>`)}
+</section>
+
+<section class="grp"><h3>Cadrage</h3>
+  ${sl("margin", "Marge extérieure", 0, 100, 0)}
+  ${sw("sideOn", "Marges par côté", false, sl("mT", "Haut +", 0, 100, 0) + sl("mR", "Droite +", 0, 100, 0) + sl("mB", "Bas +", 0, 100, 0) + sl("mL", "Gauche +", 0, 100, 0))}
+  <div class="row"><div class="lbl" style="margin:0;flex:1"><span>Alignement</span></div><div class="align" id="align"></div></div>
+</section>
+
+<section class="grp"><h3>Export</h3>
+  <div class="two">
+    <div><div class="lbl"><span>Format</span></div><select data-s id="format"><option value="png">PNG</option><option value="webp">WebP</option></select></div>
+    <div><div class="lbl"><span>Poids max (Ko)</span></div><input type="number" data-s id="maxKB" value="0" min="0" placeholder="0 = aucun"></div>
+  </div>
+  <div id="qBox" hidden>${sl("quality", "Qualité WebP", 10, 100, 90, "%")}</div>
+  <div class="note">Le poids max règle automatiquement la qualité en WebP. En PNG, le poids est seulement signalé.</div>
+  <div class="two">
+    <div><div class="lbl"><span>Préfixe</span></div><input type="text" data-s id="prefix" value="" placeholder="ex. mon_"></div>
+    <div><div class="lbl"><span>Suffixe</span></div><input type="text" data-s id="suffix" value="_sticker"></div>
+  </div>
+  ${sw("num", "Numéroter (01, 02…) au lieu du nom", false)}
+</section>
+
+<section class="grp"><button class="ghost" id="resetAll">Réinitialiser les réglages</button></section>`;
+
+// alignment grid
+let ax = 0.5, ay = 0.5;
+const alignEl = $("align");
+for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+  const b = document.createElement("button"); b.className = "ghost"; b.dataset.ax = x / 2; b.dataset.ay = y / 2; b.title = "Alignement";
+  b.onclick = () => { ax = x / 2; ay = y / 2; paintAlign(); changed(); };
+  alignEl.appendChild(b);
+}
+function paintAlign() { [...alignEl.children].forEach(b => b.classList.toggle("on", +b.dataset.ax === ax && +b.dataset.ay === ay)); }
+
+// sliders whose range & value scale with canvas size (fraction of canvas for max)
+const SCALED = { thick: .12, margin: .1, ringThick: .05, shBlur: .06, shY: .05, smooth: .05, mT: .1, mR: .1, mB: .1, mL: .1 };
+let lastSize = 1000;
+const sizeVal = () => clamp(parseInt($("size").value) || 1000, 64, 4096);
+function applyMaxes(size) {
+  for (const [id, f] of Object.entries(SCALED)) $(id).max = Math.max(5, Math.round(size * f));
+  $("mThick").max = $("thick").max;
+}
+function setSize(n) {
+  n = clamp(Math.round(n), 64, 4096);
+  const ratio = n / lastSize;
+  $("size").value = n;
+  for (const id of Object.keys(SCALED)) $(id).value = Math.round($(id).value * ratio);
+  applyMaxes(n); lastSize = n;
+  for (const it of items) if (it.adj.thick != null) it.adj.thick = Math.round(it.adj.thick * ratio);
+}
+
+/* ======================= Persistence ======================= */
+const KEY = "stickermaker.v2";
+const storeGet = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
+let pstate = storeGet();
+function saveSettings() {
+  try {
+    const s = { ...pstate, _ax: ax, _ay: ay };
+    document.querySelectorAll("[data-s]").forEach(e => s[e.id] = e.type === "checkbox" ? e.checked : e.value);
+    pstate = s; localStorage.setItem(KEY, JSON.stringify(s));
+  } catch {}
+}
+function loadSettings(s) {
+  if (s.size) { $("size").value = s.size; lastSize = sizeVal(); applyMaxes(lastSize); }
+  document.querySelectorAll("[data-s]").forEach(e => {
+    if (!(e.id in s) || e.id === "size") return;
+    if (e.type === "checkbox") e.checked = !!s[e.id]; else e.value = s[e.id];
+  });
+  if (s._ax != null) { ax = +s._ax; ay = +s._ay; }
+}
+
+/* ======================= Options ======================= */
+function currentOpts() {
+  const n = id => +$(id).value, c = id => $(id).checked;
+  return {
+    size: sizeVal(), thick: n("thick"), color: $("color").value, fill: c("fill"),
+    smooth: c("smoothOn") ? n("smooth") : 0,
+    ringOn: c("ringOn"), ringThick: n("ringThick"), ringColor: $("ringColor").value,
+    shOn: c("shOn"), shBlur: n("shBlur"), shY: n("shY"), shOp: n("shOp"),
+    bgOn: c("bgOn"), bgTol: n("bgTol"),
+    margin: n("margin"), sideOn: c("sideOn"), mT: n("mT"), mR: n("mR"), mB: n("mB"), mL: n("mL"), ax, ay,
+    format: $("format").value, quality: n("quality"), maxKB: Math.max(0, parseInt($("maxKB").value) || 0),
+    prefix: $("prefix").value, suffix: $("suffix").value, num: c("num"),
+  };
+}
+const renderOpts = o => { const r = { ...o }; delete r.prefix; delete r.suffix; delete r.num; return r; };
+const sigOf = (it, ro) => JSON.stringify([ro, it.adj]);
+
+function syncUI() {
+  document.querySelectorAll("[data-v]").forEach(l => { const e = $(l.dataset.v); l.textContent = e.value + (e.dataset.unit ?? "px"); });
+  document.querySelectorAll("[data-show]").forEach(d => d.hidden = !$(d.dataset.show).checked);
+  $("qBox").hidden = $("format").value !== "webp";
+  paintAlign();
+}
+
+/* ======================= Image processing ======================= */
+// Euclidean distance transform (Felzenszwalb & Huttenlocher): distance to nearest pixel where mask=1
 function edt(mask, w, h) {
   const INF = 1e20, n = Math.max(w, h);
   const f = new Float64Array(n), d = new Float64Array(n), z = new Float64Array(n + 1), v = new Int32Array(n);
-  const out = new Float64Array(w * h);
+  const out = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) out[i] = mask[i] ? 0 : INF;
-  const pass = (len) => {
+  const inter = (q, p) => ((f[q] + q * q) - (f[p] + p * p)) / (2 * q - 2 * p);
+  const pass = len => {
     let k = 0; v[0] = 0; z[0] = -INF; z[1] = INF;
-    const inter = (q, p) => ((f[q] + q * q) - (f[p] + p * p)) / (2 * q - 2 * p);
     for (let q = 1; q < len; q++) {
       let s = inter(q, v[k]);
       while (s <= z[k]) { k--; s = inter(q, v[k]); }
@@ -134,22 +338,57 @@ function edt(mask, w, h) {
   return out;
 }
 
-// ---------- bounding box of visible pixels ----------
-function contentBox(img) {
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const c = document.createElement("canvas"); c.width = w; c.height = h;
-  const ctx = c.getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(img, 0, 0);
-  const a = ctx.getImageData(0, 0, w, h).data;
+function contentBox(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const a = canvas.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data;
   let x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (a[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   }
-  if (x1 < 0) return { x: 0, y: 0, w, h }; // fully transparent: keep whole image
+  if (x1 < 0) return { x: 0, y: 0, w, h };
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
-// fill enclosed transparent areas of the (outline ∪ image) mask
+function removeBackground(c, tol) {
+  const w = c.width, h = c.height, ctx = c.getContext("2d", { willReadFrequently: true });
+  const id = ctx.getImageData(0, 0, w, h), p = id.data;
+  const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => (y * w + x) * 4);
+  if (corners.some(i => p[i + 3] < 10)) return; // already transparent on the border
+  const cd = (i, j) => Math.hypot(p[i] - p[j], p[i + 1] - p[j + 1], p[i + 2] - p[j + 2]);
+  let best = corners[0], bc = -1;
+  for (const a of corners) { const k = corners.filter(b => cd(a, b) <= 24).length; if (k > bc) { bc = k; best = a; } }
+  const br = p[best], bg = p[best + 1], bb = p[best + 2];
+  const dist = i => p[i + 3] < 10 ? 0 : Math.hypot(p[i] - br, p[i + 1] - bg, p[i + 2] - bb);
+  const rem = new Uint8Array(w * h), st = new Int32Array(w * h); let sp = 0;
+  const tryPush = (x, y) => { const k = y * w + x; if (!rem[k] && dist(k * 4) <= tol) { rem[k] = 1; st[sp++] = k; } };
+  for (let x = 0; x < w; x++) { tryPush(x, 0); tryPush(x, h - 1); }
+  for (let y = 0; y < h; y++) { tryPush(0, y); tryPush(w - 1, y); }
+  while (sp) {
+    const k = st[--sp], x = k % w, y = (k / w) | 0;
+    if (x > 0) tryPush(x - 1, y); if (x < w - 1) tryPush(x + 1, y);
+    if (y > 0) tryPush(x, y - 1); if (y < h - 1) tryPush(x, y + 1);
+  }
+  const fa = new Float32Array(w * h).fill(1);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = y * w + x; if (rem[k]) continue;
+    if ((x > 0 && rem[k - 1]) || (x < w - 1 && rem[k + 1]) || (y > 0 && rem[k - w]) || (y < h - 1 && rem[k + w])) {
+      const dd = dist(k * 4);
+      if (dd < tol * 1.6) fa[k] = clamp((dd - tol) / (tol * .6));
+    }
+  }
+  for (let k = 0; k < w * h; k++) { if (rem[k]) p[k * 4 + 3] = 0; else if (fa[k] < 1) p[k * 4 + 3] *= fa[k]; }
+  ctx.putImageData(id, 0, 0);
+}
+
+function prepare(it, o) {
+  const key = o.bgOn ? "bg" + o.bgTol : "raw";
+  if (it.prep && it.prep.key === key) return it.prep;
+  const c = document.createElement("canvas"); c.width = it.img.naturalWidth; c.height = it.img.naturalHeight;
+  c.getContext("2d", { willReadFrequently: true }).drawImage(it.img, 0, 0);
+  if (o.bgOn) removeBackground(c, o.bgTol);
+  return it.prep = { key, canvas: c, box: contentBox(c) };
+}
+
 function fillHoles(solid, w, h) {
   const outside = new Uint8Array(w * h), stack = [];
   const push = i => { if (!solid[i] && !outside[i]) { outside[i] = 1; stack.push(i); } };
@@ -157,143 +396,223 @@ function fillHoles(solid, w, h) {
   for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
   while (stack.length) {
     const i = stack.pop(), x = i % w;
-    if (x > 0) push(i - 1);
-    if (x < w - 1) push(i + 1);
-    if (i >= w) push(i - w);
-    if (i < w * (h - 1)) push(i + w);
+    if (x > 0) push(i - 1); if (x < w - 1) push(i + 1);
+    if (i >= w) push(i - w); if (i < w * (h - 1)) push(i + w);
   }
   return outside;
 }
 
-function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
-
-function makeSticker(img, o) {
-  const S = o.size, box = contentBox(img);
-  const inset = o.thick + o.margin;
-  const avail = Math.max(1, S - 2 * inset);
-  const scale = avail / Math.max(box.w, box.h);
-  const dw = Math.max(1, Math.round(box.w * scale)), dh = Math.max(1, Math.round(box.h * scale));
-  const dx = Math.round((S - dw) / 2), dy = Math.round((S - dh) / 2);
-
-  const out = document.createElement("canvas"); out.width = out.height = S;
-  const ctx = out.getContext("2d", { willReadFrequently: true });
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-
-  if (o.thick > 0) {
-    // draw the element, build mask, dilate by Euclidean distance (=> perfectly round outline)
-    ctx.drawImage(img, box.x, box.y, box.w, box.h, dx, dy, dw, dh);
-    const id = ctx.getImageData(0, 0, S, S), px = id.data;
-    const mask = new Uint8Array(S * S);
-    for (let i = 0; i < S * S; i++) mask[i] = px[i * 4 + 3] > 127 ? 1 : 0;
-    const dist = edt(mask, S, S);
-    const t = o.thick, rgb = hexToRgb(o.color);
-    const solid = new Uint8Array(S * S);
-    for (let i = 0; i < S * S; i++) solid[i] = dist[i] <= t ? 1 : 0;
-    const outside = o.fill ? fillHoles(solid, S, S) : null;
-    const oc = ctx.createImageData(S, S), op = oc.data;
-    for (let i = 0; i < S * S; i++) {
-      let a = Math.min(1, Math.max(0, t + 0.5 - dist[i]));
-      if (outside && !outside[i] && a < 1) a = 1;
-      if (a > 0) { op[i * 4] = rgb[0]; op[i * 4 + 1] = rgb[1]; op[i * 4 + 2] = rgb[2]; op[i * 4 + 3] = a * 255; }
-    }
-    ctx.clearRect(0, 0, S, S);
-    ctx.putImageData(oc, 0, 0);
+// alpha of the shape "everything within R px of the element"; s>0 rounds off concave corners (closing)
+function shapeAlpha(d, S, R, s, fill) {
+  const n = S * S, a = new Float32Array(n);
+  if (s > 0) {
+    const inv = new Uint8Array(n), lim = R + s;
+    for (let i = 0; i < n; i++) inv[i] = d[i] <= lim ? 0 : 1;
+    const d2 = edt(inv, S, S);
+    for (let i = 0; i < n; i++) a[i] = clamp(d2[i] - s + .5);
+  } else for (let i = 0; i < n; i++) a[i] = clamp(R + .5 - d[i]);
+  if (fill) {
+    const solid = new Uint8Array(n);
+    for (let i = 0; i < n; i++) solid[i] = a[i] > .5 ? 1 : 0;
+    const out = fillHoles(solid, S, S);
+    for (let i = 0; i < n; i++) if (!out[i]) a[i] = 1;
   }
-  ctx.drawImage(img, box.x, box.y, box.w, box.h, dx, dy, dw, dh);
-  return new Promise(res => out.toBlob(res, "image/png"));
+  return a;
 }
 
-// ---------- processing queue ----------
-function currentOpts() {
-  return {
-    size: Math.min(4096, Math.max(64, parseInt($("size").value) || 1000)),
-    thick: +$("thick").value, margin: +$("margin").value,
-    color: $("color").value, fill: $("fill").checked,
-  };
+const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+
+function makeCanvas(it, o) {
+  const { canvas: src, box } = prepare(it, o), S = o.size, adj = it.adj;
+  const thick = adj.thick != null ? adj.thick : o.thick;
+  const ringT = o.ringOn ? o.ringThick : 0;
+  const shPad = o.shOn ? Math.ceil(o.shBlur + o.shY) : 0;
+  const inset = thick + ringT + shPad;
+  const mL = o.margin + (o.sideOn ? o.mL : 0), mR = o.margin + (o.sideOn ? o.mR : 0);
+  const mT = o.margin + (o.sideOn ? o.mT : 0), mB = o.margin + (o.sideOn ? o.mB : 0);
+  const aw = Math.max(1, S - mL - mR - 2 * inset), ah = Math.max(1, S - mT - mB - 2 * inset);
+  const sc = Math.min(aw / box.w, ah / box.h) * adj.zoom;
+  const dw = Math.max(1, Math.round(box.w * sc)), dh = Math.max(1, Math.round(box.h * sc));
+  const dx = Math.round(mL + inset + (aw - dw) * o.ax + adj.dx * S / 100);
+  const dy = Math.round(mT + inset + (ah - dh) * o.ay + adj.dy * S / 100);
+
+  const layer = document.createElement("canvas"); layer.width = layer.height = S;
+  const lctx = layer.getContext("2d", { willReadFrequently: true });
+  lctx.imageSmoothingEnabled = true; lctx.imageSmoothingQuality = "high";
+  lctx.drawImage(src, box.x, box.y, box.w, box.h, dx, dy, dw, dh);
+
+  let sil = layer;
+  if (thick > 0 || ringT > 0) {
+    const px = lctx.getImageData(0, 0, S, S).data, mask = new Uint8Array(S * S);
+    let any = false;
+    for (let i = 0; i < S * S; i++) { const v = px[i * 4 + 3] > 127 ? 1 : 0; mask[i] = v; any ||= !!v; }
+    if (any) {
+      const d = edt(mask, S, S);
+      const aM = thick > 0 ? shapeAlpha(d, S, thick, o.smooth, o.fill) : null;
+      const aR = ringT > 0 ? shapeAlpha(d, S, thick + ringT, o.smooth, o.fill) : null;
+      const c1 = hexRgb(o.color), c2 = hexRgb(o.ringColor);
+      const img = new ImageData(S, S), p = img.data;
+      for (let i = 0; i < S * S; i++) {
+        const m = aM ? aM[i] : 0, r = aR ? aR[i] : 0, a = m + r * (1 - m);
+        if (a <= 0) continue;
+        const wr = r * (1 - m);
+        p[i * 4] = (c1[0] * m + c2[0] * wr) / a; p[i * 4 + 1] = (c1[1] * m + c2[1] * wr) / a; p[i * 4 + 2] = (c1[2] * m + c2[2] * wr) / a;
+        p[i * 4 + 3] = a * 255;
+      }
+      sil = document.createElement("canvas"); sil.width = sil.height = S;
+      sil.getContext("2d").putImageData(img, 0, 0);
+    }
+  }
+  const out = document.createElement("canvas"); out.width = out.height = S;
+  const ctx = out.getContext("2d");
+  if (o.shOn) {
+    ctx.shadowColor = `rgba(0,0,0,${o.shOp / 100})`; ctx.shadowBlur = o.shBlur; ctx.shadowOffsetY = o.shY;
+  }
+  ctx.drawImage(sil, 0, 0);
+  ctx.shadowColor = "transparent";
+  if (sil !== layer) ctx.drawImage(layer, 0, 0);
+  return out;
 }
-const tick = () => new Promise(r => setTimeout(r, 0));
+
+const toBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
+async function encode(canvas, o) {
+  if (o.format !== "webp") { const b = await toBlob(canvas, "image/png"); return { blob: b, ext: "png", over: o.maxKB > 0 && b.size > o.maxKB * 1024 }; }
+  let q = o.quality / 100, b = await toBlob(canvas, "image/webp", q);
+  if (b.type !== "image/webp") return { blob: b, ext: "png", over: o.maxKB > 0 && b.size > o.maxKB * 1024 }; // browser can't encode WebP
+  if (o.maxKB > 0 && b.size > o.maxKB * 1024) {
+    let lo = 0.02, hi = q, best = null;
+    for (let i = 0; i < 8; i++) {
+      const mid = (lo + hi) / 2, t = await toBlob(canvas, "image/webp", mid);
+      if (t.size <= o.maxKB * 1024) { best = t; lo = mid; } else hi = mid;
+    }
+    b = best || await toBlob(canvas, "image/webp", 0.02);
+  }
+  return { blob: b, ext: "webp", over: o.maxKB > 0 && b.size > o.maxKB * 1024 };
+}
+
+/* ======================= Items & rendering queue ======================= */
+const items = []; // {id,name,img,adj,blob,ext,url,busy,over,sig,ver,prep,el}
+const undoStack = [];
+let runToken = 0, nextId = 1;
+const newAdj = () => ({ zoom: 1, dx: 0, dy: 0, thick: null });
+
+async function renderItem(it, o = currentOpts(), ro = renderOpts(o)) {
+  const v = ++it.ver; it.busy = true; updateCard(it);
+  try {
+    const sig = sigOf(it, ro);
+    await tick();
+    const res = await encode(makeCanvas(it, o), o);
+    if (v !== it.ver) return;
+    if (it.url) URL.revokeObjectURL(it.url);
+    Object.assign(it, { blob: res.blob, ext: res.ext, over: res.over, url: URL.createObjectURL(res.blob), sig });
+  } catch (e) { console.error(e); }
+  finally { if (v === it.ver) { it.busy = false; updateCard(it); } }
+}
 
 async function processAll() {
-  const token = ++runToken, o = currentOpts();
-  let done = 0;
-  items.forEach(it => it.busy = true);
-  render();
-  for (const it of items) {
+  const token = ++runToken, o = currentOpts(), ro = renderOpts(o);
+  const todo = items.filter(it => it.sig !== sigOf(it, ro));
+  if (!todo.length) { updateStatus(); return; }
+  todo.forEach(it => { it.busy = true; updateCard(it); });
+  let done = 0; setProg(0);
+  for (const it of todo) {
     if (token !== runToken) return;
-    await tick();
-    try {
-      const blob = await makeSticker(it.img, o);
-      if (token !== runToken) return;
-      if (it.url) URL.revokeObjectURL(it.url);
-      it.blob = blob; it.url = URL.createObjectURL(blob);
-    } catch (e) { console.error(e); }
-    it.busy = false; done++;
-    updateCard(it);
-    $("status").textContent = `Traitement ${done}/${items.length}…`;
+    await renderItem(it, o, ro);
+    done++; setProg(done / todo.length);
   }
-  updateStatus();
+  if (token === runToken) { setProg(null); updateStatus(); }
 }
 
 let debounce;
-function schedule() { clearTimeout(debounce); debounce = setTimeout(processAll, 150); }
+const schedule = () => { clearTimeout(debounce); debounce = setTimeout(processAll, 160); };
+function changed() { syncUI(); saveSettings(); if (items.length) schedule(); }
 
-// ---------- UI ----------
+function setProg(v) {
+  const p = $("prog"); p.classList.toggle("on", v != null);
+  if (v != null) p.firstElementChild.style.width = (v * 100) + "%";
+}
+
+/* ======================= UI: grid ======================= */
+const fmtKB = b => b >= 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko";
+function nameFor(it, idx, o = currentOpts()) {
+  const base = o.num ? String(idx + 1).padStart(2, "0") : it.name.replace(/\.[^.]+$/, "");
+  return (o.prefix + base + o.suffix).replace(/[\\/:*?"<>|]+/g, "_") + "." + (it.ext || "png");
+}
+
+function cardEl(it) {
+  const el = document.createElement("div"); el.className = "card";
+  el.innerHTML = `<div class="thumb" title="Aperçu & réglages"><img alt=""><div class="spin"></div><span class="badge"></span><span class="tag">ajusté</span></div>
+    <div class="meta"><span></span><button class="ghost dl" title="Télécharger">⬇</button><button class="ghost rm" title="Retirer">✕</button></div>`;
+  el.querySelector(".meta span").textContent = it.name;
+  el.querySelector(".thumb").onclick = () => openModal(it);
+  el.querySelector(".dl").onclick = () => it.blob && saveBlob(it.blob, nameFor(it, items.indexOf(it)));
+  el.querySelector(".rm").onclick = () => removeItems([it]);
+  return it.el = el;
+}
+function updateCard(it) {
+  const el = it.el; if (!el) return;
+  const img = el.querySelector("img"); if (it.url && img.getAttribute("src") !== it.url) img.src = it.url;
+  el.querySelector(".spin").style.display = it.busy ? "grid" : "none";
+  const b = el.querySelector(".badge"); b.hidden = !it.blob;
+  if (it.blob) { b.textContent = fmtKB(it.blob.size); b.classList.toggle("over", !!it.over); }
+  const a = it.adj; el.querySelector(".tag").style.display = (a.zoom !== 1 || a.dx || a.dy || a.thick != null) ? "block" : "none";
+  if (cur === it) syncModalImg();
+}
+function renderGrid() { const g = $("grid"); g.innerHTML = ""; items.forEach(it => g.appendChild(it.el || cardEl(it))); items.forEach(updateCard); updateStatus(); }
+
 function updateStatus() {
-  const n = items.length;
-  $("status").textContent = n ? `${n} sticker${n > 1 ? "s" : ""} — ${currentOpts().size}×${currentOpts().size}px` : "Aucune image";
+  const n = items.length, o = currentOpts();
+  const total = items.reduce((s, i) => s + (i.blob ? i.blob.size : 0), 0);
+  $("status").textContent = n ? `${n} sticker${n > 1 ? "s" : ""} · ${o.size}×${o.size}px · ${fmtKB(total)}` : "Aucune image";
   $("zip").disabled = $("clear").disabled = !n;
   $("empty").style.display = n ? "none" : "";
 }
 
-function outName(it) { return it.name.replace(/\.[^.]+$/, "") + "_sticker.png"; }
-
-function cardEl(it) {
-  const el = document.createElement("div"); el.className = "card"; el.id = "c" + it.id;
-  el.innerHTML = `<div class="thumb"><img alt=""><div class="spin">…</div></div>
-    <div class="meta"><span></span><button class="ghost dl">PNG</button><button class="ghost rm" title="Retirer">✕</button></div>`;
-  el.querySelector(".meta span").textContent = it.name;
-  el.querySelector(".dl").onclick = () => it.blob && saveBlob(it.blob, outName(it));
-  el.querySelector(".rm").onclick = () => {
-    const i = items.indexOf(it); if (i >= 0) items.splice(i, 1);
-    if (it.url) URL.revokeObjectURL(it.url);
-    el.remove(); updateStatus();
-  };
-  return el;
-}
-function updateCard(it) {
-  const el = $("c" + it.id); if (!el) return;
-  if (it.url) el.querySelector("img").src = it.url;
-  el.querySelector(".spin").style.display = it.busy ? "" : "none";
-}
-function render() { items.forEach(updateCard); updateStatus(); }
-
 function saveBlob(blob, name) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
+/* ======================= Add / remove / undo ======================= */
 async function addFiles(files) {
-  const imgs = [...files].filter(f => f.type.startsWith("image/"));
+  const imgs = files.filter(f => f.type.startsWith("image/"));
+  if (!imgs.length) { if (files.length) toast("Aucune image reconnue"); return; }
+  let added = 0;
   for (const f of imgs) {
-    const url = URL.createObjectURL(f);
-    const img = new Image();
-    try { img.src = url; await img.decode(); } catch { URL.revokeObjectURL(url); continue; }
-    const it = { id: nextId++, name: f.name, img, blob: null, url: null, busy: true };
-    items.push(it);
-    $("grid").appendChild(cardEl(it));
+    const url = URL.createObjectURL(f), img = new Image();
+    try { img.src = url; await img.decode(); } catch { toast(`Impossible de lire ${f.name}`); continue; }
+    const it = { id: nextId++, name: f.name, img, adj: newAdj(), blob: null, ext: "png", url: null, busy: true, over: false, sig: null, ver: 0, prep: null, el: null };
+    items.push(it); $("grid").appendChild(cardEl(it)); added++;
   }
   updateStatus();
-  if (imgs.length) processAll();
+  if (added) processAll();
 }
 
-// ---------- ZIP (store, no compression — PNGs are already compressed) ----------
-const crcTable = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
-function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function removeItems(list) {
+  const entries = list.map(it => ({ it, index: items.indexOf(it) })).filter(e => e.index >= 0).sort((a, b) => a.index - b.index);
+  if (!entries.length) return;
+  runToken++;
+  for (let i = entries.length - 1; i >= 0; i--) items.splice(entries[i].index, 1);
+  entries.forEach(e => e.it.el.remove());
+  if (cur && !items.includes(cur)) closeModal();
+  undoStack.push(entries);
+  while (undoStack.length > 10) undoStack.shift().forEach(e => e.it.url && URL.revokeObjectURL(e.it.url));
+  updateStatus();
+  toast(entries.length > 1 ? `${entries.length} images retirées` : `« ${entries[0].it.name} » retiré`, "Annuler", undo);
+  if (items.some(i => i.busy)) processAll();
+}
+function undo() {
+  const entries = undoStack.pop(); if (!entries) return;
+  entries.forEach(e => items.splice(Math.min(e.index, items.length), 0, e.it));
+  renderGrid(); processAll();
+}
 
-async function buildZip(files) { // files: [{name, data: Uint8Array}]
-  const enc = new TextEncoder(), parts = [], central = [];
-  const now = new Date();
+/* ======================= Zip (store) ======================= */
+const crcTable = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function buildZip(files) {
+  const enc = new TextEncoder(), parts = [], central = [], now = new Date();
   const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
   const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
   let offset = 0;
@@ -301,59 +620,153 @@ async function buildZip(files) { // files: [{name, data: Uint8Array}]
     const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
-    lh.setUint16(8, 0, true); lh.setUint16(10, time, true); lh.setUint16(12, date, true);
-    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true);
-    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
     parts.push(lh.buffer, name, f.data);
     const ch = new DataView(new ArrayBuffer(46));
     ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
-    ch.setUint16(10, 0, true); ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true);
     ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true);
     ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
     central.push(ch.buffer, name);
     offset += 30 + name.length + size;
   }
-  const cdSize = central.reduce((s, b) => s + (b.byteLength ?? b.length), 0);
-  const end = new DataView(new ArrayBuffer(22));
+  const cdSize = central.reduce((s, b) => s + b.byteLength, 0), end = new DataView(new ArrayBuffer(22));
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
   end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
   return new Blob([...parts, ...central, end.buffer], { type: "application/zip" });
 }
-
 $("zip").onclick = async () => {
-  const ready = items.filter(i => i.blob);
-  if (!ready.length) return;
+  const ready = items.filter(i => i.blob); if (!ready.length) return;
   $("zip").disabled = true;
-  const used = new Set(), files = [];
+  const o = currentOpts(), used = new Set(), files = [];
   for (const it of ready) {
-    let name = outName(it), n = 2;
-    while (used.has(name.toLowerCase())) name = outName(it).replace(/\.png$/, `_${n++}.png`);
+    let name = nameFor(it, items.indexOf(it), o), n = 2;
+    const stem = name.replace(/\.[^.]+$/, ""), ext = name.slice(stem.length);
+    while (used.has(name.toLowerCase())) name = `${stem}_${n++}${ext}`;
     used.add(name.toLowerCase());
     files.push({ name, data: new Uint8Array(await it.blob.arrayBuffer()) });
   }
-  saveBlob(await buildZip(files), "stickers.zip");
+  saveBlob(buildZip(files), "stickers.zip");
   $("zip").disabled = false;
 };
+$("clear").onclick = () => removeItems([...items]);
 
-$("clear").onclick = () => {
-  runToken++;
-  items.forEach(it => it.url && URL.revokeObjectURL(it.url));
-  items.length = 0; $("grid").innerHTML = ""; updateStatus();
-};
+/* ======================= Modal (preview + per-image adjust) ======================= */
+let cur = null, mbg = "checker", mdeb;
+const BGS = { checker: "", white: "#ffffff", gray: "#8a8fa3", black: "#111", pink: "#ffd6ea" };
+function paintBg() {
+  const p = $("mprev");
+  p.style.background = mbg === "checker" ? "repeating-conic-gradient(var(--check1) 0 25%, var(--check2) 0 50%) 0 0 / 20px 20px" : BGS[mbg];
+  [...$("mBgs").children].forEach(b => b.classList.toggle("on", b.dataset.bg === mbg));
+}
+for (const k of Object.keys(BGS)) {
+  const b = document.createElement("button"); b.dataset.bg = k; b.title = k;
+  b.style.background = k === "checker" ? "repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 10px 10px" : BGS[k];
+  b.onclick = () => { mbg = k; pstate._mbg = k; paintBg(); saveSettings(); };
+  $("mBgs").appendChild(b);
+}
+function syncModalImg() { if (cur && cur.url) $("mImg").src = cur.url; $("mImg").style.opacity = cur && cur.busy ? .55 : 1; }
+function syncModalCtrls() {
+  const a = cur.adj;
+  $("mZoom").value = Math.round(a.zoom * 100); $("mX").value = a.dx; $("mY").value = a.dy;
+  $("mThickOn").checked = a.thick != null; $("mThick").value = a.thick != null ? a.thick : $("thick").value;
+  $("mThickBox").hidden = a.thick == null;
+  $("mZoomV").textContent = $("mZoom").value + "%"; $("mXV").textContent = a.dx + "%"; $("mYV").textContent = a.dy + "%"; $("mThickV").textContent = $("mThick").value + "px";
+  $("mName").textContent = cur.name;
+}
+function openModal(it) { cur = it; $("modal").classList.add("on"); paintBg(); syncModalCtrls(); syncModalImg(); }
+function closeModal() { $("modal").classList.remove("on"); cur = null; }
+function navModal(d) { if (!cur) return; const i = items.indexOf(cur) + d; if (items[i]) openModal(items[i]); }
+function adjChanged() {
+  const a = cur.adj;
+  a.zoom = $("mZoom").value / 100; a.dx = +$("mX").value; a.dy = +$("mY").value;
+  a.thick = $("mThickOn").checked ? +$("mThick").value : null;
+  syncModalCtrls(); updateCard(cur);
+  clearTimeout(mdeb); const it = cur; mdeb = setTimeout(() => renderItem(it), 90);
+}
+["mZoom", "mX", "mY", "mThick", "mThickOn"].forEach(id => $(id).addEventListener("input", adjChanged));
+$("mReset").onclick = () => { cur.adj = newAdj(); syncModalCtrls(); updateCard(cur); renderItem(cur); };
+$("mDl").onclick = () => cur && cur.blob && saveBlob(cur.blob, nameFor(cur, items.indexOf(cur)));
+$("mClose").onclick = closeModal; $("mPrev").onclick = () => navModal(-1); $("mNext").onclick = () => navModal(1);
+$("modal").addEventListener("mousedown", e => { if (e.target === $("modal")) closeModal(); });
 
-// ---------- wiring ----------
+/* ======================= Toasts ======================= */
+function toast(msg, label, fn) {
+  const t = document.createElement("div"); t.className = "toast";
+  const s = document.createElement("span"); s.textContent = msg; t.appendChild(s);
+  if (label) { const b = document.createElement("button"); b.textContent = label; b.onclick = () => { fn(); t.remove(); }; t.appendChild(b); }
+  $("toasts").appendChild(t); setTimeout(() => t.remove(), 7000);
+}
+
+/* ======================= Input: drop / pick / paste ======================= */
+async function walk(entry, out) {
+  if (entry.isFile) { out.push(await new Promise(r => entry.file(r, () => r(null)))); return; }
+  if (!entry.isDirectory) return;
+  const rd = entry.createReader();
+  for (;;) {
+    const batch = await new Promise(r => rd.readEntries(r, () => r([])));
+    if (!batch.length) break;
+    for (const e of batch) await walk(e, out);
+  }
+}
+async function filesFromDrop(dt) {
+  const fallback = [...dt.files];
+  const entries = [...dt.items].map(i => i.kind === "file" && i.webkitGetAsEntry ? i.webkitGetAsEntry() : null);
+  if (!entries.some(Boolean)) return fallback;
+  const out = [];
+  for (const e of entries) if (e) await walk(e, out);
+  return out.filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+}
 const drop = $("drop");
 drop.onclick = () => $("file").click();
-$("file").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
-["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
-["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", e => addFiles(e.dataTransfer.files));
-window.addEventListener("dragover", e => e.preventDefault());
-window.addEventListener("drop", e => { e.preventDefault(); if (!drop.contains(e.target)) addFiles(e.dataTransfer.files); });
+$("pickFolder").onclick = () => $("folder").click();
+$("file").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+$("folder").onchange = e => { addFiles([...e.target.files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))); e.target.value = ""; };
+["dragenter", "dragover"].forEach(ev => window.addEventListener(ev, e => { e.preventDefault(); if (drop.contains(e.target)) drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => window.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+window.addEventListener("drop", async e => { if (e.dataTransfer) addFiles(await filesFromDrop(e.dataTransfer)); });
+window.addEventListener("paste", e => {
+  const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
+  if (!fs.length) return;
+  e.preventDefault();
+  addFiles(fs.map((f, i) => new File([f], f.name && f.name !== "image.png" ? f.name : `collage-${Date.now() % 100000}-${i + 1}.png`, { type: f.type })));
+});
+window.addEventListener("keydown", e => {
+  const typing = /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName) && document.activeElement.type !== "range" && document.activeElement.type !== "checkbox";
+  if (e.key === "Escape" && cur) closeModal();
+  else if (cur && e.key === "ArrowLeft" && !typing) navModal(-1);
+  else if (cur && e.key === "ArrowRight" && !typing) navModal(1);
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing && undoStack.length) { e.preventDefault(); undo(); }
+});
 
-const labels = () => { $("thickV").textContent = $("thick").value + " px"; $("marginV").textContent = $("margin").value + " px"; };
-["size", "thick", "margin", "color", "fill"].forEach(id => $(id).addEventListener("input", () => { labels(); if (items.length) schedule(); }));
-labels(); updateStatus();
+/* ======================= Wiring ======================= */
+document.querySelectorAll("[data-s]").forEach(e => {
+  if (e.id === "size") e.addEventListener("change", () => { setSize(sizeVal()); changed(); });
+  else e.addEventListener("input", changed);
+});
+document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+  const [s, f, kb] = b.dataset.p.split(",");
+  setSize(+s); $("format").value = f; $("maxKB").value = kb; changed();
+});
+$("resetAll").onclick = () => {
+  pstate = { _theme: pstate._theme, _mbg: pstate._mbg };
+  try { localStorage.setItem(KEY, JSON.stringify(pstate)); } catch {}
+  location.reload();
+};
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  pstate._theme = t; saveSettings();
+}
+$("theme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+
+// init (load before anything calls saveSettings, which would overwrite stored values)
+const saved = pstate;
+loadSettings(saved);
+applyMaxes(sizeVal());
+if (saved._mbg && BGS[saved._mbg] !== undefined) mbg = saved._mbg;
+setTheme(saved._theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+syncUI(); updateStatus();
 </script>
 </body>
 </html>
