@@ -107,6 +107,15 @@
   .toast { background: #20233a; color: #fff; padding: 10px 14px; border-radius: 12px; display: flex; gap: 14px; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.4); animation: pop .2s; font-size: 14px; }
   .toast button { padding: 4px 10px; font-size: 13px; }
   .note { font-size: 12px; color: var(--muted); }
+  .dirs { display: grid; grid-template-columns: repeat(3, 34px); gap: 4px; }
+  .dirs button { width: 34px; height: 34px; padding: 0; font-size: 16px; border-radius: 9px; }
+  .dirs button.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border-color: transparent; }
+  .dirs button:disabled { visibility: hidden; }
+  #vPrev { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); display: block; background: var(--solid); }
+  .rec { position: fixed; right: 16px; bottom: 16px; z-index: 70; width: 230px; background: var(--solid); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: grid; gap: 8px; box-shadow: 0 20px 50px -10px rgba(0,0,0,.5); }
+  .rec[hidden] { display: none; }
+  .rec canvas { width: 100%; border-radius: 10px; display: block; }
+  .rec .prog { margin: 0; opacity: 1; }
 </style>
 </head>
 <body>
@@ -135,6 +144,7 @@
       <div class="actions">
         <button class="ghost" id="pickFolder">📁 Dossier</button>
         <button class="ghost" id="clear" disabled>Tout vider</button>
+        <button class="ghost" id="vidBtn" disabled hidden>🎬 Vidéos</button>
         <button id="zip" disabled>⬇ Tout télécharger (.zip)</button>
       </div>
     </div>
@@ -167,9 +177,16 @@
         <button class="ghost" id="mReset">Réinitialiser</button>
         <button id="mDl">⬇ Télécharger</button>
       </div>
+      <button class="ghost" id="mVid" hidden>🎬 Exporter la vidéo</button>
       <button class="ghost" id="mClose">Fermer</button>
     </div>
   </div>
+</div>
+<div class="rec" id="rec" hidden>
+  <canvas id="recCanvas" width="240" height="240"></canvas>
+  <b id="recTxt" style="font-size:13px"></b>
+  <div class="prog"><i></i></div>
+  <button class="ghost" id="recCancel">Annuler</button>
 </div>
 <div class="toasts" id="toasts"></div>
 
@@ -215,6 +232,22 @@ $("controls").innerHTML = `
   ${sl("margin", "Marge extérieure", 0, 100, 0)}
   ${sw("sideOn", "Marges par côté", false, sl("mT", "Haut +", 0, 100, 0) + sl("mR", "Droite +", 0, 100, 0) + sl("mB", "Bas +", 0, 100, 0) + sl("mL", "Gauche +", 0, 100, 0))}
   <div class="row"><div class="lbl" style="margin:0;flex:1"><span>Alignement</span></div><div class="align" id="align"></div></div>
+</section>
+
+<section class="grp"><h3>Vidéo</h3>
+  ${sw("vidOn", "Vidéo « le sticker se décolle »", false,
+    `<canvas id="vPrev" width="360" height="360"></canvas>
+     <div class="row"><div class="lbl" style="margin:0;flex:1"><span>Se décolle depuis…</span></div><div class="dirs" id="dirs"></div></div>
+     ${sl("vAngle", "Direction précise", 0, 359, 315, "°")}
+     ${sl("vDur", "Durée", 2, 10, 3, " s")}
+     ${sl("vRad", "Courbure du décollage", 4, 30, 12, "%")}
+     <div class="two">
+       <div><div class="lbl"><span>Taille</span></div><select data-s id="vSize"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select></div>
+       ${col("vBg", "Fond", "#e9ebf2")}
+     </div>
+     ${col("vBack", "Dos du sticker", "#f3f3f6")}
+     ${sw("vRev", "Inverser (le sticker se colle)", false)}
+     <div class="note">La vidéo est enregistrée en temps réel : garde l'onglet visible pendant l'export. MP4 si ton navigateur le permet, sinon WebM.</div>`)}
 </section>
 
 <section class="grp"><h3>Export</h3>
@@ -301,7 +334,8 @@ function syncUI() {
   document.querySelectorAll("[data-v]").forEach(l => { const e = $(l.dataset.v); l.textContent = e.value + (e.dataset.unit ?? "px"); });
   document.querySelectorAll("[data-show]").forEach(d => d.hidden = !$(d.dataset.show).checked);
   $("qBox").hidden = $("format").value !== "webp";
-  paintAlign();
+  $("vidBtn").hidden = $("mVid").hidden = !$("vidOn").checked;
+  paintAlign(); paintDirs();
 }
 
 /* ======================= Image processing ======================= */
@@ -525,7 +559,7 @@ async function processAll() {
 
 let debounce;
 const schedule = () => { clearTimeout(debounce); debounce = setTimeout(processAll, 160); };
-function changed() { syncUI(); saveSettings(); if (items.length) schedule(); }
+function changed() { syncUI(); saveSettings(); if (items.length) schedule(); previewSoon(); }
 
 function setProg(v) {
   const p = $("prog"); p.classList.toggle("on", v != null);
@@ -565,6 +599,8 @@ function updateStatus() {
   const total = items.reduce((s, i) => s + (i.blob ? i.blob.size : 0), 0);
   $("status").textContent = n ? `${n} sticker${n > 1 ? "s" : ""} · ${o.size}×${o.size}px · ${fmtKB(total)}` : "Aucune image";
   $("zip").disabled = $("clear").disabled = !n;
+  $("vidBtn").disabled = !n;
+  previewSoon();
   $("empty").style.display = n ? "none" : "";
 }
 
@@ -739,6 +775,175 @@ window.addEventListener("keydown", e => {
   else if (cur && e.key === "ArrowRight" && !typing) navModal(1);
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing && undoStack.length) { e.preventDefault(); undo(); }
 });
+
+/* ======================= Peel video ======================= */
+const loadImage = url => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+function videoOpts() {
+  const n = id => +$(id).value;
+  return { angle: n("vAngle") * Math.PI / 180, dur: n("vDur"), rad: n("vRad") / 100, vs: n("vSize"), bg: $("vBg").value, back: $("vBack").value, rev: $("vRev").checked, fps: 30 };
+}
+
+// Direction picker (3x3 around the sticker)
+const dirsEl = $("dirs");
+["↖", "↑", "↗", "←", "", "→", "↙", "↓", "↘"].forEach((label, i) => {
+  const b = document.createElement("button"); b.className = "ghost"; b.textContent = label;
+  const col = i % 3, row = (i / 3) | 0;
+  if (i === 4) b.disabled = true;
+  else {
+    b.dataset.deg = (Math.round(Math.atan2(row - 1, col - 1) * 180 / Math.PI) + 360) % 360;
+    b.title = "Le sticker se décolle depuis ce côté";
+    b.onclick = () => { $("vAngle").value = b.dataset.deg; $("vAngle").dispatchEvent(new Event("input")); };
+  }
+  dirsEl.appendChild(b);
+});
+function paintDirs() { [...dirsEl.children].forEach(b => b.classList.toggle("on", b.dataset.deg === $("vAngle").value)); }
+
+// Builds a frame renderer: the sticker is peeled like a page curl around a cylinder, in a frame rotated so the peel runs along +x.
+async function makeAnim(it, vo) {
+  const img = await loadImage(it.url);
+  const VS = vo.vs, ss = Math.round(VS * .62), a = vo.angle;
+  const L = Math.ceil(ss * 1.4143) + 16, LL = L * 2, C = LL / 2; // L = band holding the sticker, LL = room for the folded part
+  const ext = ss * (Math.abs(Math.cos(a)) + Math.abs(Math.sin(a)));
+  const mk = (w = LL, h = LL) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+
+  const sil = mk(ss, ss), sctx = sil.getContext("2d");
+  sctx.drawImage(img, 0, 0, ss, ss); sctx.globalCompositeOperation = "source-in"; sctx.fillStyle = vo.back; sctx.fillRect(0, 0, ss, ss);
+  const front = mk(), back = mk();
+  for (const [cv, src] of [[front, img], [back, sil]]) {
+    const c = cv.getContext("2d"); c.imageSmoothingQuality = "high";
+    c.translate(C, C); c.rotate(-a); c.drawImage(src, -ss / 2, -ss / 2, ss, ss);
+  }
+  const fr = mk(), cv = mk(), tmp = mk(8, L);
+  const frc = fr.getContext("2d"), cvc = cv.getContext("2d"), tc = tmp.getContext("2d");
+  const r = Math.max(4, ss * vo.rad), kp = .1 / (2 * r), STEP = 2;
+  const xs = C + ext / 2, xe = C - ext / 2;
+  // light comes from the top-left of the screen; express shadow offsets in the rotated frame
+  const lx = (r * .25) * Math.cos(a) + (r * .45) * Math.sin(a), ly = -(r * .25) * Math.sin(a) + (r * .45) * Math.cos(a);
+  const sx0 = ss * .006 * Math.cos(a) + ss * .01 * Math.sin(a), sy0 = -ss * .006 * Math.sin(a) + ss * .01 * Math.cos(a);
+  const pos = (p, s) => {
+    const th = s / r;
+    return th < Math.PI ? [p + r * Math.sin(th), r * (1 - Math.cos(th)), th] : [p - (s - Math.PI * r), 2 * r, th];
+  };
+
+  function draw(ctx, t) {
+    const hold = .25, span = Math.max(.1, vo.dur - 2 * hold);
+    let u = clamp((t - hold) / span); if (vo.rev) u = 1 - u;
+    const prog = easeIO(u), fade = clamp((u - .86) / .14);
+    const p = xs - (xs - xe) * prog;
+    frc.clearRect(0, 0, LL, LL); cvc.clearRect(0, 0, LL, LL);
+
+    const flat = Math.round(clamp(p, 0, LL));
+    if (flat > 0) {
+      frc.save(); frc.shadowColor = "rgba(0,0,0,.25)"; frc.shadowBlur = ss * .02; frc.shadowOffsetX = sx0; frc.shadowOffsetY = sy0;
+      frc.drawImage(front, 0, 0, flat, LL, 0, 0, flat, LL); frc.restore();
+    }
+    if (prog > 0 && fade < 1) {
+      for (let x = Math.floor(Math.max(p, 0)); x <= Math.min(LL - STEP, Math.ceil(xs) + STEP); x += STEP) {
+        const s = Math.max(0, x - p), [xo, z, th] = pos(p, s), [xo2] = pos(p, s + STEP);
+        const isFront = th < Math.PI / 2, k = 1 + z * kp;
+        tc.clearRect(0, 0, 8, L);
+        tc.drawImage(isFront ? front : back, x, C - L / 2, STEP, L, 0, 0, STEP, L);
+        tc.globalCompositeOperation = "source-atop";
+        const dark = isFront ? .4 * Math.sin(th) : .3 * (1 - Math.min(1, (th - Math.PI / 2) / (Math.PI / 2)));
+        if (dark > .01) { tc.fillStyle = `rgba(0,0,0,${dark})`; tc.fillRect(0, 0, STEP, L); }
+        if (isFront) { const hl = .24 * Math.exp(-(((th - .55) / .28) ** 2)); if (hl > .01) { tc.fillStyle = `rgba(255,255,255,${hl})`; tc.fillRect(0, 0, STEP, L); } }
+        tc.globalCompositeOperation = "source-over";
+        cvc.drawImage(tmp, 0, 0, STEP, L, Math.min(xo, xo2), C - L * k / 2, Math.abs(xo2 - xo) + .8, L * k);
+      }
+      frc.save(); frc.globalAlpha = 1 - fade;
+      frc.shadowColor = "rgba(0,0,0,.32)"; frc.shadowBlur = r * .5; frc.shadowOffsetX = lx; frc.shadowOffsetY = ly;
+      frc.drawImage(cv, 0, 0); frc.restore();
+    }
+    const g = ctx.createRadialGradient(VS / 2, VS / 2, VS * .1, VS / 2, VS / 2, VS * .75);
+    g.addColorStop(0, vo.bg); g.addColorStop(1, "#000"); // overlay below tones the vignette
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = vo.bg; ctx.fillRect(0, 0, VS, VS);
+    ctx.fillStyle = g; ctx.globalAlpha = .12; ctx.fillRect(0, 0, VS, VS); ctx.globalAlpha = 1;
+    ctx.save(); ctx.translate(VS / 2, VS / 2); ctx.rotate(a); ctx.drawImage(fr, -C, -C); ctx.restore();
+  }
+  return { draw, VS, dur: vo.dur };
+}
+
+// ----- live preview in the sidebar
+let pAnim = null, pRaf = 0, pStart = 0, pKey = "", pTok = 0, pTimer;
+function previewItem() { return (cur && cur.url) ? cur : items.find(i => i.url); }
+function previewSoon() { clearTimeout(pTimer); pTimer = setTimeout(rebuildPreview, 250); }
+async function rebuildPreview() {
+  const cv = $("vPrev");
+  if (!$("vidOn").checked) { pAnim = null; return; }
+  const it = previewItem();
+  if (!it) { pAnim = null; const c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height); c.fillStyle = "#8a8fa3"; c.font = "14px system-ui"; c.textAlign = "center"; c.fillText("Ajoute une image pour voir l'aperçu", cv.width / 2, cv.height / 2); return; }
+  const vo = videoOpts(); vo.vs = 360;
+  const key = it.id + ":" + it.url + JSON.stringify(vo);
+  if (key === pKey && pAnim) return;
+  const tok = ++pTok, a = await makeAnim(it, vo);
+  if (tok !== pTok) return;
+  pKey = key; pAnim = a; pStart = performance.now();
+  if (!pRaf) pRaf = requestAnimationFrame(pLoop);
+}
+function pLoop() {
+  pRaf = 0;
+  if (!pAnim || !$("vidOn").checked) return;
+  const t = ((performance.now() - pStart) / 1000) % (pAnim.dur + .6);
+  pAnim.draw($("vPrev").getContext("2d"), Math.min(t, pAnim.dur));
+  pRaf = requestAnimationFrame(pLoop);
+}
+
+// ----- recording
+let recCancel = false, recBusy = false;
+const pickMime = () => window.MediaRecorder && ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find(m => MediaRecorder.isTypeSupported(m));
+async function recordVideo(it, vo, onProgress) {
+  const mime = pickMime(); if (!mime) throw new Error("Ton navigateur ne sait pas enregistrer de vidéo.");
+  const anim = await makeAnim(it, vo), cv = $("recCanvas"); cv.width = cv.height = anim.VS;
+  const ctx = cv.getContext("2d"); anim.draw(ctx, 0);
+  const rec = new MediaRecorder(cv.captureStream(vo.fps), { mimeType: mime, videoBitsPerSecond: 8e6 });
+  const chunks = []; rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  const stopped = new Promise(r => rec.onstop = r);
+  rec.start();
+  const t0 = performance.now();
+  await new Promise(res => {
+    const loop = () => {
+      const t = (performance.now() - t0) / 1000;
+      anim.draw(ctx, Math.min(t, anim.dur)); onProgress(Math.min(1, t / anim.dur));
+      if (t >= anim.dur || recCancel) return res();
+      requestAnimationFrame(loop);
+    };
+    loop();
+  });
+  await new Promise(r => setTimeout(r, 150));
+  rec.stop(); await stopped;
+  if (recCancel) throw new Error("cancel");
+  return { blob: new Blob(chunks, { type: mime.split(";")[0] }), ext: mime.startsWith("video/mp4") ? "mp4" : "webm" };
+}
+async function exportVideos(list) {
+  if (recBusy || !list.length) return;
+  recBusy = true; recCancel = false; $("rec").hidden = false;
+  const vo = videoOpts(), o = currentOpts(), out = [];
+  try {
+    for (let n = 0; n < list.length; n++) {
+      const it = list[n];
+      while (it.busy || !it.url) await new Promise(r => setTimeout(r, 100));
+      $("recTxt").textContent = `Vidéo ${n + 1}/${list.length} · ${it.name}`;
+      const bar = $("rec").querySelector(".prog i");
+      const r = await recordVideo(it, vo, p => bar.style.width = (p * 100) + "%");
+      out.push({ ...r, name: nameFor(it, items.indexOf(it), o).replace(/\.[^.]+$/, "") + "_decollage." + r.ext });
+    }
+  } catch (e) { if (e.message !== "cancel") toast("Erreur vidéo : " + e.message); }
+  $("rec").hidden = true; recBusy = false;
+  if (!out.length) return;
+  if (out.length === 1) return saveBlob(out[0].blob, out[0].name);
+  const used = new Set(), files = [];
+  for (const f of out) {
+    let name = f.name, k = 2; while (used.has(name)) name = f.name.replace(/(\.[^.]+)$/, `_${k++}$1`);
+    used.add(name); files.push({ name, data: new Uint8Array(await f.blob.arrayBuffer()) });
+  }
+  saveBlob(buildZip(files), "videos.zip");
+}
+$("vidBtn").onclick = () => exportVideos(items.filter(i => i.blob));
+$("mVid").onclick = () => cur && exportVideos([cur]);
+$("recCancel").onclick = () => { recCancel = true; };
 
 /* ======================= Wiring ======================= */
 document.querySelectorAll("[data-s]").forEach(e => {
