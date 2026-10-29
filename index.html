@@ -112,6 +112,7 @@
   .dirs button { width: 34px; height: 34px; padding: 0; font-size: 16px; border-radius: 9px; }
   .dirs button.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border-color: transparent; }
   .dirs button:disabled { visibility: hidden; }
+  #vPrev.chk { background: repeating-conic-gradient(var(--check1) 0 25%, var(--check2) 0 50%) 0 0 / 16px 16px; }
   #vPrev { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); display: block; background: var(--solid); }
   .rec { position: fixed; right: 16px; bottom: 16px; z-index: 70; width: 230px; background: var(--solid); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: grid; gap: 8px; box-shadow: 0 20px 50px -10px rgba(0,0,0,.5); }
   .rec[hidden] { display: none; }
@@ -145,7 +146,7 @@
       <div class="actions">
         <button class="ghost" id="pickFolder">📁 Dossier</button>
         <button class="ghost" id="clear" disabled>Tout vider</button>
-        <button class="ghost" id="vidBtn" disabled hidden>🎬 Vidéos</button>
+        <button class="ghost" id="vidBtn" disabled hidden>🎬 Animations</button>
         <button id="zip" disabled>⬇ Tout télécharger (.zip)</button>
       </div>
     </div>
@@ -180,7 +181,7 @@
       </div>
       <label class="sw" id="mBlackSw" hidden><input type="checkbox" id="mBlackView"><i></i><span>Aperçu version silhouette</span></label>
       <button class="ghost" id="mDlB" hidden>⬇ Télécharger la silhouette</button>
-      <button class="ghost" id="mVid" hidden>🎬 Exporter la vidéo</button>
+      <button class="ghost" id="mVid" hidden>🎬 Exporter l'animation</button>
       <button class="ghost" id="mClose">Fermer</button>
     </div>
   </div>
@@ -244,13 +245,16 @@ $("controls").innerHTML = `
      ${sl("vAngle", "Direction précise", 0, 359, 315, "°")}
      ${sl("vDur", "Durée", 2, 10, 3, " s")}
      ${sl("vRad", "Courbure du décollage", 4, 30, 12, "%")}
+     <div><div class="lbl"><span>Format d'export</span></div><select data-s id="vMode"><option value="video">Vidéo MP4/WebM (fond plein)</option><option value="seq">Séquence PNG transparente (Unity…)</option></select></div>
      <div class="two">
        <div><div class="lbl"><span>Taille</span></div><select data-s id="vSize"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select></div>
-       ${col("vBg", "Fond", "#e9ebf2")}
+       <div><div class="lbl"><span>Images / s</span></div><select data-s id="vFps"><option value="24">24</option><option value="30" selected>30</option><option value="60">60</option></select></div>
      </div>
+     <div id="vBgBox">${col("vBg", "Fond", "#e9ebf2")}</div>
      ${col("vBack", "Dos du sticker", "#f3f3f6")}
+     ${sw("vUnder", "Silhouette pleine sous le sticker", false, col("vUnderColor", "Couleur de la silhouette", "#000000") + `<div class="note">Reste en place et apparaît quand le sticker se décolle.</div>`)}
      ${sw("vRev", "Inverser (le sticker se colle)", false)}
-     <div class="note">La vidéo est enregistrée en temps réel : garde l'onglet visible pendant l'export. MP4 si ton navigateur le permet, sinon WebM.</div>`)}
+     <div class="note" id="vNote"></div>`)}
 </section>
 
 <section class="grp"><h3>Export</h3>
@@ -342,6 +346,11 @@ function syncUI() {
   document.querySelectorAll("[data-v]").forEach(l => { const e = $(l.dataset.v); l.textContent = e.value + (e.dataset.unit ?? "px"); });
   document.querySelectorAll("[data-show]").forEach(d => d.hidden = !$(d.dataset.show).checked);
   $("qBox").hidden = $("format").value !== "webp";
+  const seq = $("vMode").value === "seq";
+  $("vBgBox").hidden = seq; $("vPrev").classList.toggle("chk", seq);
+  $("vNote").textContent = seq
+    ? "Une image PNG par frame, fond transparent, dans un .zip (un dossier par sticker). Unity : importe les PNG en Sprite (2D and UI), sélectionne-les tous et glisse-les dans la scène pour créer l'animation."
+    : "Enregistrée en temps réel : garde l'onglet visible pendant l'export. MP4 si ton navigateur le permet, sinon WebM. Pas de transparence en vidéo : utilise la séquence PNG.";
   $("vidBtn").hidden = $("mVid").hidden = !$("vidOn").checked;
   paintAlign(); paintDirs();
 }
@@ -811,7 +820,8 @@ const easeIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 
 function videoOpts() {
   const n = id => +$(id).value;
-  return { angle: n("vAngle") * Math.PI / 180, dur: n("vDur"), rad: n("vRad") / 100, vs: n("vSize"), bg: $("vBg").value, back: $("vBack").value, rev: $("vRev").checked, fps: 30 };
+  return { angle: n("vAngle") * Math.PI / 180, dur: n("vDur"), rad: n("vRad") / 100, vs: n("vSize"), bg: $("vBg").value, back: $("vBack").value, rev: $("vRev").checked, fps: n("vFps"),
+    seq: $("vMode").value === "seq", under: $("vUnder").checked, underColor: $("vUnderColor").value };
 }
 
 // Direction picker (3x3 around the sticker)
@@ -839,10 +849,16 @@ async function makeAnim(it, vo) {
 
   const sil = mk(ss, ss), sctx = sil.getContext("2d");
   sctx.drawImage(img, 0, 0, ss, ss); sctx.globalCompositeOperation = "source-in"; sctx.fillStyle = vo.back; sctx.fillRect(0, 0, ss, ss);
-  const front = mk(), back = mk();
-  for (const [cv, src] of [[front, img], [back, sil]]) {
+  const front = mk(), back = mk(), under = vo.under ? mk() : null;
+  const layers = [[front, img, ss], [back, sil, ss]];
+  if (under) { // flat silhouette left behind, a hair smaller so the sticker's antialiased edge doesn't show a dark fringe
+    const su = mk(ss, ss), uc = su.getContext("2d");
+    uc.drawImage(img, 0, 0, ss, ss); uc.globalCompositeOperation = "source-in"; uc.fillStyle = vo.underColor; uc.fillRect(0, 0, ss, ss);
+    layers.push([under, su, Math.round(ss * .994)]);
+  }
+  for (const [cv, src, size] of layers) {
     const c = cv.getContext("2d"); c.imageSmoothingQuality = "high";
-    c.translate(C, C); c.rotate(-a); c.drawImage(src, -ss / 2, -ss / 2, ss, ss);
+    c.translate(C, C); c.rotate(-a); c.drawImage(src, -size / 2, -size / 2, size, size);
   }
   const fr = mk(), cv = mk(), tmp = mk(8, L);
   const frc = fr.getContext("2d"), cvc = cv.getContext("2d"), tc = tmp.getContext("2d");
@@ -862,6 +878,7 @@ async function makeAnim(it, vo) {
     const prog = easeIO(u), fade = clamp((u - .86) / .14);
     const p = xs - (xs - xe) * prog;
     frc.clearRect(0, 0, LL, LL); cvc.clearRect(0, 0, LL, LL);
+    if (under) frc.drawImage(under, 0, 0);
 
     const flat = Math.round(clamp(p, 0, LL));
     if (flat > 0) {
@@ -885,11 +902,14 @@ async function makeAnim(it, vo) {
       frc.shadowColor = "rgba(0,0,0,.32)"; frc.shadowBlur = r * .5; frc.shadowOffsetX = lx; frc.shadowOffsetY = ly;
       frc.drawImage(cv, 0, 0); frc.restore();
     }
-    const g = ctx.createRadialGradient(VS / 2, VS / 2, VS * .1, VS / 2, VS / 2, VS * .75);
-    g.addColorStop(0, vo.bg); g.addColorStop(1, "#000"); // overlay below tones the vignette
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = vo.bg; ctx.fillRect(0, 0, VS, VS);
-    ctx.fillStyle = g; ctx.globalAlpha = .12; ctx.fillRect(0, 0, VS, VS); ctx.globalAlpha = 1;
+    if (vo.seq) ctx.clearRect(0, 0, VS, VS);
+    else {
+      const g = ctx.createRadialGradient(VS / 2, VS / 2, VS * .1, VS / 2, VS / 2, VS * .75);
+      g.addColorStop(0, vo.bg); g.addColorStop(1, "#000"); // overlay below tones the vignette
+      ctx.fillStyle = vo.bg; ctx.fillRect(0, 0, VS, VS);
+      ctx.fillStyle = g; ctx.globalAlpha = .12; ctx.fillRect(0, 0, VS, VS); ctx.globalAlpha = 1;
+    }
     ctx.save(); ctx.translate(VS / 2, VS / 2); ctx.rotate(a); ctx.drawImage(fr, -C, -C); ctx.restore();
   }
   return { draw, VS, dur: vo.dur };
@@ -946,29 +966,41 @@ async function recordVideo(it, vo, onProgress) {
   if (recCancel) throw new Error("cancel");
   return { blob: new Blob(chunks, { type: mime.split(";")[0] }), ext: mime.startsWith("video/mp4") ? "mp4" : "webm" };
 }
+async function renderSequence(it, vo, onProgress) {
+  const anim = await makeAnim(it, vo), cv = $("recCanvas"); cv.width = cv.height = anim.VS;
+  const ctx = cv.getContext("2d"), n = Math.round(anim.dur * vo.fps) + 1, files = [];
+  for (let i = 0; i < n; i++) {
+    if (recCancel) throw new Error("cancel");
+    anim.draw(ctx, Math.min(i / vo.fps, anim.dur));
+    const b = await toBlob(cv, "image/png");
+    files.push({ name: `frame_${String(i + 1).padStart(4, "0")}.png`, data: new Uint8Array(await b.arrayBuffer()) });
+    onProgress((i + 1) / n);
+  }
+  return files;
+}
 async function exportVideos(list) {
   if (recBusy || !list.length) return;
   recBusy = true; recCancel = false; $("rec").hidden = false;
-  const vo = videoOpts(), o = currentOpts(), out = [];
+  const vo = videoOpts(), o = currentOpts(), out = [], stems = new Set();
   try {
     for (let n = 0; n < list.length; n++) {
       const it = list[n];
       while (it.busy || !it.url) await new Promise(r => setTimeout(r, 100));
-      $("recTxt").textContent = `Vidéo ${n + 1}/${list.length} · ${it.name}`;
-      const bar = $("rec").querySelector(".prog i");
-      const r = await recordVideo(it, vo, p => bar.style.width = (p * 100) + "%");
-      out.push({ ...r, name: nameFor(it, items.indexOf(it), o).replace(/\.[^.]+$/, "") + "_decollage." + r.ext });
+      $("recTxt").textContent = `${vo.seq ? "Images" : "Vidéo"} ${n + 1}/${list.length} · ${it.name}`;
+      const bar = $("rec").querySelector(".prog i"), prog = p => bar.style.width = (p * 100) + "%";
+      let stem = nameFor(it, items.indexOf(it), o).replace(/\.[^.]+$/, "") + "_decollage", k = 2;
+      while (stems.has(stem.toLowerCase())) stem = stem.replace(/(_\d+)?$/, `_${k++}`);
+      stems.add(stem.toLowerCase());
+      if (vo.seq) out.push({ name: stem + ".zip", files: (await renderSequence(it, vo, prog)).map(f => ({ name: `${stem}/${f.name}`, data: f.data })) });
+      else { const r = await recordVideo(it, vo, prog); out.push({ name: `${stem}.${r.ext}`, blob: r.blob }); }
     }
-  } catch (e) { if (e.message !== "cancel") toast("Erreur vidéo : " + e.message); }
+  } catch (e) { if (e.message !== "cancel") toast("Erreur d'export : " + e.message); }
   $("rec").hidden = true; recBusy = false;
   if (!out.length) return;
-  if (out.length === 1) return saveBlob(out[0].blob, out[0].name);
-  const used = new Set(), files = [];
-  for (const f of out) {
-    let name = f.name, k = 2; while (used.has(name)) name = f.name.replace(/(\.[^.]+)$/, `_${k++}$1`);
-    used.add(name); files.push({ name, data: new Uint8Array(await f.blob.arrayBuffer()) });
-  }
-  saveBlob(buildZip(files), "videos.zip");
+  if (out.length === 1 && out[0].blob) return saveBlob(out[0].blob, out[0].name);
+  const files = [];
+  for (const f of out) files.push(...(f.files || [{ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) }]));
+  saveBlob(buildZip(files), out.length === 1 ? out[0].name : "animations.zip");
 }
 $("vidBtn").onclick = () => exportVideos(items.filter(i => i.blob));
 $("mVid").onclick = () => cur && exportVideos([cur]);
