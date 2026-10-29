@@ -41,6 +41,7 @@
   .sub { display: grid; gap: 10px; padding: 10px 0 2px 14px; border-left: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); }
   .sub[hidden] { display: none; }
   .sw { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; font-size: 14px; user-select: none; }
+  .sw[hidden] { display: none; }
   .sw input { position: absolute; opacity: 0; }
   .sw i { width: 38px; height: 22px; border-radius: 99px; background: var(--line); position: relative; transition: .2s; flex: none; }
   .sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
@@ -177,6 +178,8 @@
         <button class="ghost" id="mReset">Réinitialiser</button>
         <button id="mDl">⬇ Télécharger</button>
       </div>
+      <label class="sw" id="mBlackSw" hidden><input type="checkbox" id="mBlackView"><i></i><span>Aperçu version silhouette</span></label>
+      <button class="ghost" id="mDlB" hidden>⬇ Télécharger la silhouette</button>
       <button class="ghost" id="mVid" hidden>🎬 Exporter la vidéo</button>
       <button class="ghost" id="mClose">Fermer</button>
     </div>
@@ -262,6 +265,10 @@ $("controls").innerHTML = `
     <div><div class="lbl"><span>Suffixe</span></div><input type="text" data-s id="suffix" value="_sticker"></div>
   </div>
   ${sw("num", "Numéroter (01, 02…) au lieu du nom", false)}
+  ${sw("blackOn", "Ajouter une version silhouette pleine", false,
+    col("blackColor", "Couleur de la silhouette", "#000000") +
+    `<div><div class="lbl"><span>Suffixe du fichier</span></div><input type="text" data-s id="blackSuffix" value="_noir"></div>
+     <div class="note">Exportée en plus du sticker : même forme (contour inclus, sans ombre), remplie d'une seule couleur.</div>`)}
 </section>
 
 <section class="grp"><button class="ghost" id="resetAll">Réinitialiser les réglages</button></section>`;
@@ -325,9 +332,10 @@ function currentOpts() {
     margin: n("margin"), sideOn: c("sideOn"), mT: n("mT"), mR: n("mR"), mB: n("mB"), mL: n("mL"), ax, ay,
     format: $("format").value, quality: n("quality"), maxKB: Math.max(0, parseInt($("maxKB").value) || 0),
     prefix: $("prefix").value, suffix: $("suffix").value, num: c("num"),
+    blackOn: c("blackOn"), blackColor: $("blackColor").value, blackSuffix: $("blackSuffix").value,
   };
 }
-const renderOpts = o => { const r = { ...o }; delete r.prefix; delete r.suffix; delete r.num; return r; };
+const renderOpts = o => { const r = { ...o }; delete r.prefix; delete r.suffix; delete r.num; delete r.blackSuffix; return r; };
 const sigOf = (it, ro) => JSON.stringify([ro, it.adj]);
 
 function syncUI() {
@@ -505,7 +513,14 @@ function makeCanvas(it, o) {
   ctx.drawImage(sil, 0, 0);
   ctx.shadowColor = "transparent";
   if (sil !== layer) ctx.drawImage(layer, 0, 0);
-  return out;
+  let solid = null;
+  if (o.blackOn) { // flat silhouette of sticker + outlines, no shadow
+    solid = document.createElement("canvas"); solid.width = solid.height = S;
+    const sc = solid.getContext("2d");
+    sc.drawImage(sil, 0, 0); if (sil !== layer) sc.drawImage(layer, 0, 0);
+    sc.globalCompositeOperation = "source-in"; sc.fillStyle = o.blackColor; sc.fillRect(0, 0, S, S);
+  }
+  return { out, solid };
 }
 
 const toBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
@@ -525,7 +540,7 @@ async function encode(canvas, o) {
 }
 
 /* ======================= Items & rendering queue ======================= */
-const items = []; // {id,name,img,adj,blob,ext,url,busy,over,sig,ver,prep,el}
+const items = []; // {id,name,img,adj,blob,ext,url,blackBlob,blackUrl,busy,over,sig,ver,prep,el}
 const undoStack = [];
 let runToken = 0, nextId = 1;
 const newAdj = () => ({ zoom: 1, dx: 0, dy: 0, thick: null });
@@ -535,10 +550,13 @@ async function renderItem(it, o = currentOpts(), ro = renderOpts(o)) {
   try {
     const sig = sigOf(it, ro);
     await tick();
-    const res = await encode(makeCanvas(it, o), o);
+    const { out, solid } = makeCanvas(it, o);
+    const res = await encode(out, o), res2 = solid ? await encode(solid, o) : null;
     if (v !== it.ver) return;
     if (it.url) URL.revokeObjectURL(it.url);
-    Object.assign(it, { blob: res.blob, ext: res.ext, over: res.over, url: URL.createObjectURL(res.blob), sig });
+    if (it.blackUrl) URL.revokeObjectURL(it.blackUrl);
+    Object.assign(it, { blob: res.blob, ext: res.ext, over: res.over, url: URL.createObjectURL(res.blob), sig,
+      blackBlob: res2 && res2.blob, blackUrl: res2 && URL.createObjectURL(res2.blob) });
   } catch (e) { console.error(e); }
   finally { if (v === it.ver) { it.busy = false; updateCard(it); } }
 }
@@ -568,18 +586,19 @@ function setProg(v) {
 
 /* ======================= UI: grid ======================= */
 const fmtKB = b => b >= 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko";
-function nameFor(it, idx, o = currentOpts()) {
+function nameFor(it, idx, o = currentOpts(), black = false) {
   const base = o.num ? String(idx + 1).padStart(2, "0") : it.name.replace(/\.[^.]+$/, "");
-  return (o.prefix + base + o.suffix).replace(/[\\/:*?"<>|]+/g, "_") + "." + (it.ext || "png");
+  return (o.prefix + base + o.suffix + (black ? o.blackSuffix : "")).replace(/[\\/:*?"<>|]+/g, "_") + "." + (it.ext || "png");
 }
 
 function cardEl(it) {
   const el = document.createElement("div"); el.className = "card";
   el.innerHTML = `<div class="thumb" title="Aperçu & réglages"><img alt=""><div class="spin"></div><span class="badge"></span><span class="tag">ajusté</span></div>
-    <div class="meta"><span></span><button class="ghost dl" title="Télécharger">⬇</button><button class="ghost rm" title="Retirer">✕</button></div>`;
+    <div class="meta"><span></span><button class="ghost dl" title="Télécharger">⬇</button><button class="ghost dlb" title="Télécharger la version silhouette" hidden>◼</button><button class="ghost rm" title="Retirer">✕</button></div>`;
   el.querySelector(".meta span").textContent = it.name;
   el.querySelector(".thumb").onclick = () => openModal(it);
   el.querySelector(".dl").onclick = () => it.blob && saveBlob(it.blob, nameFor(it, items.indexOf(it)));
+  el.querySelector(".dlb").onclick = () => it.blackBlob && saveBlob(it.blackBlob, nameFor(it, items.indexOf(it), currentOpts(), true));
   el.querySelector(".rm").onclick = () => removeItems([it]);
   return it.el = el;
 }
@@ -587,6 +606,7 @@ function updateCard(it) {
   const el = it.el; if (!el) return;
   const img = el.querySelector("img"); if (it.url && img.getAttribute("src") !== it.url) img.src = it.url;
   el.querySelector(".spin").style.display = it.busy ? "grid" : "none";
+  el.querySelector(".dlb").hidden = !it.blackBlob;
   const b = el.querySelector(".badge"); b.hidden = !it.blob;
   if (it.blob) { b.textContent = fmtKB(it.blob.size); b.classList.toggle("over", !!it.over); }
   const a = it.adj; el.querySelector(".tag").style.display = (a.zoom !== 1 || a.dx || a.dy || a.thick != null) ? "block" : "none";
@@ -596,7 +616,7 @@ function renderGrid() { const g = $("grid"); g.innerHTML = ""; items.forEach(it 
 
 function updateStatus() {
   const n = items.length, o = currentOpts();
-  const total = items.reduce((s, i) => s + (i.blob ? i.blob.size : 0), 0);
+  const total = items.reduce((s, i) => s + (i.blob ? i.blob.size : 0) + (i.blackBlob ? i.blackBlob.size : 0), 0);
   $("status").textContent = n ? `${n} sticker${n > 1 ? "s" : ""} · ${o.size}×${o.size}px · ${fmtKB(total)}` : "Aucune image";
   $("zip").disabled = $("clear").disabled = !n;
   $("vidBtn").disabled = !n;
@@ -677,11 +697,14 @@ $("zip").onclick = async () => {
   $("zip").disabled = true;
   const o = currentOpts(), used = new Set(), files = [];
   for (const it of ready) {
-    let name = nameFor(it, items.indexOf(it), o), n = 2;
-    const stem = name.replace(/\.[^.]+$/, ""), ext = name.slice(stem.length);
-    while (used.has(name.toLowerCase())) name = `${stem}_${n++}${ext}`;
-    used.add(name.toLowerCase());
-    files.push({ name, data: new Uint8Array(await it.blob.arrayBuffer()) });
+    for (const black of [false, true]) {
+      const blob = black ? it.blackBlob : it.blob; if (!blob) continue;
+      let name = nameFor(it, items.indexOf(it), o, black), n = 2;
+      const stem = name.replace(/\.[^.]+$/, ""), ext = name.slice(stem.length);
+      while (used.has(name.toLowerCase())) name = `${stem}_${n++}${ext}`;
+      used.add(name.toLowerCase());
+      files.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
+    }
   }
   saveBlob(buildZip(files), "stickers.zip");
   $("zip").disabled = false;
@@ -702,7 +725,11 @@ for (const k of Object.keys(BGS)) {
   b.onclick = () => { mbg = k; pstate._mbg = k; paintBg(); saveSettings(); };
   $("mBgs").appendChild(b);
 }
-function syncModalImg() { if (cur && cur.url) $("mImg").src = cur.url; $("mImg").style.opacity = cur && cur.busy ? .55 : 1; }
+function syncModalImg() {
+  const hasB = !!(cur && cur.blackUrl);
+  $("mBlackSw").hidden = $("mDlB").hidden = !hasB;
+  if (!hasB) $("mBlackView").checked = false;
+  if (cur && cur.url) $("mImg").src = $("mBlackView").checked ? cur.blackUrl : cur.url; $("mImg").style.opacity = cur && cur.busy ? .55 : 1; }
 function syncModalCtrls() {
   const a = cur.adj;
   $("mZoom").value = Math.round(a.zoom * 100); $("mX").value = a.dx; $("mY").value = a.dy;
@@ -723,6 +750,8 @@ function adjChanged() {
 }
 ["mZoom", "mX", "mY", "mThick", "mThickOn"].forEach(id => $(id).addEventListener("input", adjChanged));
 $("mReset").onclick = () => { cur.adj = newAdj(); syncModalCtrls(); updateCard(cur); renderItem(cur); };
+$("mBlackView").onchange = syncModalImg;
+$("mDlB").onclick = () => cur && cur.blackBlob && saveBlob(cur.blackBlob, nameFor(cur, items.indexOf(cur), currentOpts(), true));
 $("mDl").onclick = () => cur && cur.blob && saveBlob(cur.blob, nameFor(cur, items.indexOf(cur)));
 $("mClose").onclick = closeModal; $("mPrev").onclick = () => navModal(-1); $("mNext").onclick = () => navModal(1);
 $("modal").addEventListener("mousedown", e => { if (e.target === $("modal")) closeModal(); });
