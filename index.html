@@ -853,7 +853,11 @@ async function makeAnim(it, vo) {
   const layers = [[front, img, ss], [back, sil, ss]];
   if (under) { // flat silhouette left behind, a hair smaller so the sticker's antialiased edge doesn't show a dark fringe
     const su = mk(ss, ss), uc = su.getContext("2d");
-    uc.drawImage(img, 0, 0, ss, ss); uc.globalCompositeOperation = "source-in"; uc.fillStyle = vo.underColor; uc.fillRect(0, 0, ss, ss);
+    uc.drawImage(img, 0, 0, ss, ss);
+    const ud = uc.getImageData(0, 0, ss, ss), up = ud.data; // keep the shape only: drop faint drop-shadow pixels, keep antialiased edges
+    for (let i = 3; i < up.length; i += 4) up[i] = Math.round(clamp((up[i] - 110) / 50) * 255);
+    uc.putImageData(ud, 0, 0);
+    uc.globalCompositeOperation = "source-in"; uc.fillStyle = vo.underColor; uc.fillRect(0, 0, ss, ss);
     layers.push([under, su, Math.round(ss * .994)]);
   }
   for (const [cv, src, size] of layers) {
